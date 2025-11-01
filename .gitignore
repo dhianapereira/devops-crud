@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+*.pdb
+*.log
+*.sqlite3
+
+# Virtual environments
+venv/
+env/
+.venv/
+ENV/
+
+# Flask and migrations
+instance/
+.migrations/
+
+# Docker
+db-data/
+*.pid
+
+# IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# envs
+.env
+.env.*
+!.env.example
+
+# build
+build/
+dist/
+*.egg-info/
+*.egg
+
+# cache and local dependencies
+.cache/
+.pytest_cache/
+pip-wheel-metadata/
