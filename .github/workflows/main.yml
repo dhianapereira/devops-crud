@@ -1,0 +1,35 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  main:
+    name: CI, Build and Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1) Source code checkout
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2) Spin up containers for tests (development docker-compose)
+      - name: Start services for tests
+        run: |
+          cp .env.example .env
+          docker compose up -d --build
+          # wait a bit for Postgres to be ready
+          sleep 15
+
+      # 3) Run pytest inside the app container
+      - name: Run unit tests with pytest
+        run: |
+          docker compose exec app pytest
+
+      # 4) Tear down test environment (always, even if tests fail)
+      - name: Stop services
+        if: always()
+        run: |
+          docker compose down -v
