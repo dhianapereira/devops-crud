@@ -26,6 +26,7 @@ ENV PATH="/opt/venv/bin:$PATH"
 WORKDIR /app
 
 COPY app ./app
+COPY tests/ ./tests
 
 # Default environment variables
 ENV FLASK_APP=app/main.py
