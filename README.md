@@ -2,7 +2,7 @@
 
 ![CI/CD](https://github.com/dhianapereira/devops-crud/actions/workflows/main.yml/badge.svg)
 
-Este projeto demonstra como criar um **ambiente multi-container** utilizando **Docker Compose**. Inclui uma **API Flask com CRUD** conectada a um banco de dados **PostgreSQL**.
+Este projeto demonstra como criar um ambiente multi-container utilizando Docker Compose. Inclui uma API Flask com CRUD conectada a um banco de dados PostgreSQL.
 
 - [Projeto DevOps - Ambiente Multi-Container](#projeto-devops---ambiente-multi-container)
   - [Segurança](#segurança)
@@ -14,13 +14,13 @@ Este projeto demonstra como criar um **ambiente multi-container** utilizando **D
     - [Construir e subir os containers](#construir-e-subir-os-containers)
     - [Criar as tabelas no banco de dados](#criar-as-tabelas-no-banco-de-dados)
     - [Testar o funcionamento](#testar-o-funcionamento)
-      - [Verificar se o serviço está ativo:](#verificar-se-o-serviço-está-ativo)
+      - [Verificar se o serviço está ativo](#verificar-se-o-serviço-está-ativo)
     - [Testar o CRUD](#testar-o-crud)
-      - [Criar um item:](#criar-um-item)
-      - [Listar todos os itens:](#listar-todos-os-itens)
-      - [Buscar item por ID:](#buscar-item-por-id)
-      - [Atualizar item:](#atualizar-item)
-      - [Deletar item:](#deletar-item)
+      - [Criar um item](#criar-um-item)
+      - [Listar todos os itens](#listar-todos-os-itens)
+      - [Buscar item por ID](#buscar-item-por-id)
+      - [Atualizar item](#atualizar-item)
+      - [Excluir item](#excluir-item)
     - [Parar e limpar o ambiente](#parar-e-limpar-o-ambiente)
   - [CI/CD](#cicd)
     - [Secrets do GitHub](#secrets-do-github)
@@ -28,9 +28,9 @@ Este projeto demonstra como criar um **ambiente multi-container** utilizando **D
 
 
 ## Segurança
-- O banco **não** é acessado com o usuário padrão `postgres`.
+- O banco NÃO é acessado com o usuário padrão `postgres`.
 - O script `init-db.sql` cria um usuário separado (`appuser`) com permissões apenas sobre o banco `appdb`.
-- As credenciais são configuradas via variáveis de ambiente, e **não estão hardcoded** no código da aplicação.
+- As credenciais são configuradas via variáveis de ambiente, e não estão hardcoded no código da aplicação.
 
 ## Persistência de Dados
 O volume `db-data` garante que os dados do banco sejam mantidos mesmo que o container seja removido:
@@ -78,13 +78,13 @@ docker compose up -d --build
 ```
 
 Esse comando:
-- Cria a imagem da aplicação Flask usando um **Dockerfile multi-stage**
+- Cria a imagem da aplicação Flask
 - Sobe o container do banco de dados PostgreSQL (`devops_db`)
 - Executa automaticamente o script `init-db.sql`, que cria:
   - Banco: `appdb`
   - Usuário: `appuser`
   - Senha: `appsecret`
-- Sobe o container da aplicação (`devops_app`) na porta **5000**
+- Sobe o container da aplicação (`devops_app`) na porta 5000
 
 ### Criar as tabelas no banco de dados
 Após os containers estarem rodando, execute este comando para criar as tabelas:
@@ -96,7 +96,7 @@ Esse comando cria a tabela `items` dentro do banco `appdb`.
 
 ### Testar o funcionamento
 
-#### Verificar se o serviço está ativo:
+#### Verificar se o serviço está ativo
 
 ```bash
 curl http://localhost:5000/health
@@ -110,7 +110,7 @@ Resposta esperada:
 
 ### Testar o CRUD
 
-#### Criar um item:
+#### Criar um item
 
 ```bash
 curl -X POST http://localhost:5000/items \
@@ -118,19 +118,19 @@ curl -X POST http://localhost:5000/items \
   -d '{"name": "Caderno", "description": "Capa dura"}'
 ```
 
-#### Listar todos os itens:
+#### Listar todos os itens
 
 ```bash
 curl http://localhost:5000/items
 ```
 
-#### Buscar item por ID:
+#### Buscar item por ID
 
 ```bash
 curl http://localhost:5000/items/1
 ```
 
-#### Atualizar item:
+#### Atualizar item
 
 ```bash
 curl -X PUT http://localhost:5000/items/1 \
@@ -138,7 +138,7 @@ curl -X PUT http://localhost:5000/items/1 \
   -d '{"name": "Caderno Atualizado"}'
 ```
 
-#### Deletar item:
+#### Excluir item
 
 ```bash
 curl -X DELETE http://localhost:5000/items/1
@@ -162,7 +162,7 @@ Este projeto utiliza um pipeline completo de CI/CD configurado com GitHub Action
 
 O processo é executado automaticamente toda vez que um commit é enviado para a branch `main`, seguindo as etapas abaixo:
 
-1. **Integração Contínua (CI):**
+1. **CI:**
 
      - O GitHub Actions realiza o *checkout* do código e inicia o ambiente de testes com Docker Compose.
      - São executados todos os testes automatizados com `pytest`.
@@ -173,17 +173,17 @@ O processo é executado automaticamente toda vez que um commit é enviado para a
      - Caso os testes passem, o pipeline gera uma **imagem Docker** da aplicação.
      - A imagem é enviada automaticamente para o **Docker Hub**, com duas *tags*: `latest` e o hash curto do commit (exemplo: `a1b2c3d`).
 
-3. **Deploy Contínuo (CD):**
+3. **CD:**
 
      - Após o envio da imagem, o pipeline conecta-se ao servidor remoto via **SSH** (usando as chaves e credenciais armazenadas nos *Secrets* do GitHub).
      - Dentro do servidor, o workflow:
        - Atualiza o repositório com `git pull`.
        - Cria um arquivo `.env` temporário com o nome e a tag da imagem.
        - Executa os comandos:
-        ```bash
-        docker-compose --env-file .env -f docker-compose.prod.yml pull app
-        docker-compose --env-file .env -f docker-compose.prod.yml up -d
-        ```
+          ```bash
+          docker-compose --env-file .env -f docker-compose.prod.yml pull app
+          docker-compose --env-file .env -f docker-compose.prod.yml up -d
+          ```
        - Assim, a aplicação é atualizada automaticamente com a nova versão da imagem Docker.
 
 ### Secrets do GitHub
