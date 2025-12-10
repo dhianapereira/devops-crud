@@ -1,0 +1,13 @@
+package_update: true
+package_upgrade: true
+packages:
+  - docker.io
+  - docker-compose
+  - git
+
+runcmd:
+  - systemctl enable docker
+  - systemctl start docker
+  - git clone https://github.com/dhianapereira/devops-crud.git /root/devops-crud
+  - cd /root/devops-crud
+  - docker-compose up -d --build

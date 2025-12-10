@@ -44,3 +44,9 @@ dist/
 .cache/
 .pytest_cache/
 pip-wheel-metadata/
+
+# Terraform
+terraform/*.tfvars
+.terraform/
+*.tfstate
+*.tfstate.*

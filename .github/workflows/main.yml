@@ -6,9 +6,55 @@ on:
       - main
 
 jobs:
+  # Provision infrastructure using Terraform
+  provision_infra:
+    name: Provision Infrastructure (Terraform)
+    runs-on: ubuntu-latest
+
+    env:
+      TF_API_TOKEN: ${{ secrets.TF_API_TOKEN }}
+      TF_VAR_do_token: ${{ secrets.DO_TOKEN }}
+      TF_VAR_ssh_key_name: ${{ secrets.SSH_KEY_NAME }}
+
+    outputs:
+      droplet_ip: ${{ steps.output_ip.outputs.droplet_ip }}
+
+    steps:
+      # Checkout the repository
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Setup Terraform CLI
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.6
+          cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
+
+      # Initialize Terraform
+      - name: Terraform Init
+        working-directory: terraform
+        run: terraform init -input=false
+
+      # Apply Terraform configuration (create droplet)
+      - name: Terraform Apply
+        working-directory: terraform
+        run: terraform apply -auto-approve -input=false
+
+      # Capture droplet IP as output
+      - name: Get Droplet IP
+        id: output_ip
+        working-directory: terraform
+        run: |
+          IP=$(terraform output -raw droplet_ip)
+          echo "droplet_ip=$IP" >> $GITHUB_OUTPUT
+
+
+  # Run tests, build Docker image, and push to Docker Hub
   main:
     name: CI, Build and Deploy
     runs-on: ubuntu-latest
+    needs: provision_infra
 
     steps:
       # 1) Source code checkout
@@ -63,7 +109,7 @@ jobs:
       - name: Deploy to production server
         uses: appleboy/ssh-action@v1.2.0
         with:
-          host: ${{ secrets.SSH_HOST }}
+          host: ${{ needs.provision_infra.outputs.droplet_ip }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
@@ -74,12 +120,12 @@ jobs:
             git pull origin main || true
 
             # Set environment variables used by docker-compose.prod.yml
-            export DOCKER_IMAGE_NAME=${{ secrets.DOCKER_IMAGE_NAME }}
-            export DOCKER_IMAGE_TAG=${{ steps.meta.outputs.tag }}
+            echo "DOCKER_IMAGE_NAME=${{ secrets.DOCKER_IMAGE_NAME }}" > .env
+            echo "DOCKER_IMAGE_TAG=${{ steps.meta.outputs.tag }}" >> .env
 
             # Drops old containers, but keeps volumes (DB is not deleted)
             docker-compose -f docker-compose.prod.yml down || true
 
             # Pull the new image and restart the application using the production compose file
-            docker-compose -f docker-compose.prod.yml pull app
-            docker-compose -f docker-compose.prod.yml up -d
+            docker-compose --env-file .env -f docker-compose.prod.yml pull app
+            docker-compose --env-file .env -f docker-compose.prod.yml up -d
