@@ -31,7 +31,7 @@ resource "digitalocean_droplet" "app" {
 
   ssh_keys = [data.digitalocean_ssh_key.existing.id]
 
-  user_data = file("${path.module}/cloud-init.yaml")
+  user_data = file("${path.module}/cloud-init.yml")
 
   tags = ["devops", "crud", "ci-cd"]
 
