@@ -8,6 +8,7 @@ packages:
 runcmd:
   - systemctl enable docker
   - systemctl start docker
-  - git clone https://github.com/dhianapereira/devops-crud.git /root/devops-crud
+  - cd /root
+  - test -d /root/devops-crud/.git || git clone https://github.com/dhianapereira/devops-crud.git
   - cd /root/devops-crud
   - docker-compose up -d --build
