@@ -25,6 +25,12 @@ Este projeto demonstra como criar um ambiente multi-container utilizando Docker 
   - [CI/CD](#cicd)
     - [Secrets do GitHub](#secrets-do-github)
     - [Configuração Manual no Servidor (Primeiro Acesso)](#configuração-manual-no-servidor-primeiro-acesso)
+  - [Infraestrutura como Código (IaC)](#infraestrutura-como-código-iac)
+    - [Estrutura](#estrutura)
+    - [Funcionamento](#funcionamento)
+    - [Execução no Pipeline](#execução-no-pipeline)
+    - [Variáveis Necessárias](#variáveis-necessárias)
+    - [Observação sobre variáveis no Terraform Cloud e no GitHub Secrets](#observação-sobre-variáveis-no-terraform-cloud-e-no-github-secrets)
 
 
 ## Segurança
@@ -193,12 +199,14 @@ Para que o deploy funcione corretamente, é necessário configurar os seguintes 
 | -------------------- | ----------------------------------------------------------------- |
 | `DOCKERHUB_USERNAME` | Usuário do Docker Hub                                             |
 | `DOCKERHUB_TOKEN`    | Token de acesso do Docker Hub (com permissão de push)             |
-| `DOCKER_IMAGE_NAME`  | Nome completo da imagem         |
-| `SSH_HOST`           | IP público do servidor remoto                                     |
-| `SSH_USER`           | Usuário SSH |
-| `SSH_PORT`           | Porta SSH                         |
+| `DOCKER_IMAGE_NAME`  | Nome completo da imagem                                           |
+| `SSH_USER`           | Usuário SSH                                                       |
+| `SSH_PORT`           | Porta SSH                                                         |
 | `SSH_PRIVATE_KEY`    | Chave privada usada pelo GitHub Actions para conectar ao servidor |
-| `SERVER_APP_PATH`    | Caminho do projeto no servidor |
+| `SERVER_APP_PATH`    | Caminho do projeto no servidor                                    |
+| `TF_API_TOKEN`       | Token da Terraform Cloud utilizado para autenticação              |
+| `DO_TOKEN`           | Token da DigitalOcean utilizado pelo provider do Terraform        |
+| `SSH_KEY_NAME`       | Nome da chave SSH cadastrada na DigitalOcean                      |
 
 Essas variáveis são definidas em
 **Configurações → Secrets and variables → Actions → New repository secret**.
@@ -239,3 +247,50 @@ Antes do primeiro deploy automático, é necessário preparar o servidor (VPS).
    ```bash
    docker-compose up -d --build
    ```
+
+## Infraestrutura como Código (IaC)
+Esta etapa utiliza o Terraform para automatizar a criação e o gerenciamento da infraestrutura na DigitalOcean, eliminando a necessidade de configuração manual do servidor.
+
+### Estrutura
+A pasta `terraform/` contém os arquivos de definição da infraestrutura:
+
+| Arquivo           | Descrição                                                                                           |
+| ----------------- | --------------------------------------------------------------------------------------------------- |
+| `main.tf`         | Define o provedor da DigitalOcean e cria o droplet utilizado em produção          |
+| `variables.tf`    | Declara as variáveis utilizadas pelo Terraform, como `do_token` e `ssh_key_name`                    |
+| `outputs.tf`      | Exporta informações úteis, como o IP público do droplet                                             |
+| `cloud-init.yaml` | Script executado automaticamente no droplet para instalar Docker, Docker Compose e clonar o projeto |
+
+### Funcionamento
+1. O Terraform se conecta à DigitalOcean utilizando o token (`do_token`) e cria um droplet conforme os parâmetros definidos em `main.tf`.
+2. O campo `user_data` executa o arquivo `cloud-init.yaml`, que instala o Docker, o Docker Compose e clona este repositório no servidor.
+3. O state do Terraform é armazenado no Terraform Cloud, o que garante controle de versão e rastreabilidade das mudanças na infraestrutura.
+4. As variáveis sensíveis, como o token da DigitalOcean e o nome da chave SSH, são configuradas diretamente no Terraform Cloud, dentro da workspace do projeto.
+
+   * Foi necessário acessar a interface do Terraform Cloud e criar as variáveis `do_token` e `ssh_key_name` na aba Variables da workspace, marcando-as como *Sensitive* para proteger os valores.
+5. A execução do Terraform é feita automaticamente durante o pipeline, na etapa de provisionamento.
+
+### Execução no Pipeline
+Durante a execução do workflow no GitHub Actions:
+
+- O job `provision_infra` inicializa o Terraform (`terraform init`), aplica as alterações (`terraform apply -auto-approve`) e cria o droplet.
+- Após a criação, o IP público do droplet é obtido por meio do comando `terraform output -raw droplet_ip` e repassado para o job de deploy.
+- Esse processo garante que a infraestrutura esteja sempre provisionada antes da etapa de deploy da aplicação.
+
+### Variáveis Necessárias
+As variáveis abaixo são obrigatórias para o correto funcionamento do Terraform.
+Elas devem ser configuradas na workspace do Terraform Cloud e *Secrets* do GitHub Actions:
+
+| Nome da Variável | Local de Configuração | Descrição                                                           |
+| ---------------- | --------------------- | ------------------------------------------------------------------- |
+| `TF_API_TOKEN`   | GitHub Secrets        | Token da Terraform Cloud utilizado para autenticação                |
+| `DO_TOKEN`       | GitHub Secrets        | Token da DigitalOcean utilizado pelo provider do Terraform          |
+| `do_token`       | Terraform Cloud       | Variável utilizada pelo Terraform para autenticação na DigitalOcean |
+| `ssh_key_name`   | Terraform Cloud       | Nome da chave SSH cadastrada na DigitalOcean                        |
+| `SSH_KEY_NAME`   | GitHub Secrets        | Nome da chave SSH (usada também na etapa de deploy)                 |
+
+### Observação sobre variáveis no Terraform Cloud e no GitHub Secrets
+Durante a configuração do pipeline, foi necessário definir variáveis tanto no **Terraform Cloud** quanto nos **Secrets do GitHub Actions**, pois cada ambiente utiliza essas informações em momentos diferentes da execução:
+
+- As variáveis do Terraform Cloud (`do_token` e `ssh_key_name`) são utilizadas dentro do plano remoto do Terraform, durante a criação do droplet na DigitalOcean.
+- Já as variáveis do GitHub Secrets (`TF_API_TOKEN`, `DO_TOKEN`, `SSH_PRIVATE_KEY`), entre outras são usadas no pipeline do GitHub Actions, para autenticação no Terraform Cloud, no Docker Hub e na etapa de deploy via SSH.
