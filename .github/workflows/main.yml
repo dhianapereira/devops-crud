@@ -124,8 +124,8 @@ jobs:
             echo "DOCKER_IMAGE_TAG=${{ steps.meta.outputs.tag }}" >> .env
 
             # Drops old containers, but keeps volumes (DB is not deleted)
-            docker-compose -f docker-compose.prod.yml down || true
+            docker compose -f docker-compose.prod.yml down || true
 
             # Pull the new image and restart the application using the production compose file
-            docker-compose --env-file .env -f docker-compose.prod.yml pull app
-            docker-compose --env-file .env -f docker-compose.prod.yml up -d
+            docker compose --env-file .env -f docker-compose.prod.yml pull app
+            docker compose --env-file .env -f docker-compose.prod.yml up -d
