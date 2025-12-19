@@ -49,7 +49,6 @@ jobs:
           IP=$(terraform output -raw droplet_ip)
           echo "droplet_ip=$IP" >> $GITHUB_OUTPUT
 
-
   # Run tests, build Docker image, and push to Docker Hub
   main:
     name: CI, Build and Deploy
@@ -114,10 +113,17 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
           script: |
+            set -e
+
+            # Wait for cloud-init to finish provisioning the server
+            while [ ! -f /var/lib/cloud/instance/boot-finished ]; do
+              sleep 5
+            done
+
             cd ${{ secrets.SERVER_APP_PATH }}
 
             # Update repository (docker-compose.prod.yml, etc.)
-            git pull origin main || true
+            git pull origin main
 
             # Set environment variables used by docker-compose.prod.yml
             echo "DOCKER_IMAGE_NAME=${{ secrets.DOCKER_IMAGE_NAME }}" > .env
