@@ -3,7 +3,7 @@ package_update: true
 package_upgrade: true
 packages:
   - docker.io
-  - docker-compose-plugin
+  - docker-compose
   - git
 
 runcmd:
@@ -12,4 +12,3 @@ runcmd:
   - cd /root
   - test -d /root/devops-crud/.git || git clone https://github.com/dhianapereira/devops-crud.git
   - cd /root/devops-crud
-  - docker compose up -d --build

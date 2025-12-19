@@ -187,8 +187,8 @@ O processo é executado automaticamente toda vez que um commit é enviado para a
        - Cria um arquivo `.env` temporário com o nome e a tag da imagem.
        - Executa os comandos:
           ```bash
-          docker compose --env-file .env -f docker-compose.prod.yml pull app
-          docker compose --env-file .env -f docker-compose.prod.yml up -d
+          docker-compose --env-file .env -f docker-compose.prod.yml pull app
+          docker-compose --env-file .env -f docker-compose.prod.yml up -d
           ```
        - Assim, a aplicação é atualizada automaticamente com a nova versão da imagem Docker.
 
@@ -245,7 +245,7 @@ Antes do primeiro deploy automático, é necessário preparar o servidor (VPS).
 5. **Executar manualmente o compose (opcional)**
 
    ```bash
-   docker compose up -d --build
+   docker-compose up -d --build
    ```
 
 ## Infraestrutura como Código (IaC)
