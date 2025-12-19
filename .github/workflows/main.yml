@@ -120,6 +120,12 @@ jobs:
               sleep 5
             done
 
+            # Ensure Docker Compose v2 is available (docker compose ...)
+            if ! docker compose version >/dev/null 2>&1; then
+              sudo apt-get update -y
+              sudo apt-get install -y docker-compose-plugin
+            fi
+
             cd ${{ secrets.SERVER_APP_PATH }}
 
             # Update repository (docker-compose.prod.yml, etc.)
